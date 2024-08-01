@@ -9,8 +9,9 @@ function build() {
 	echo "Running $TASK_NAME:build"
 	echo "================================= CHANGED =============================="
 
-	echo "$ROX_CENTRAL_ENDPOINT"
- 	echo "${ROX_API_TOKEN:0:10}"
+	echo "GH ====> ${GITOPS_AUTH_PASSWORD:0:10}"
+	echo "URL====> $ROX_CENTRAL_ENDPOINT"
+ 	echo "TOKEN==> ${ROX_API_TOKEN:0:10}"
 	# Set task results
 	echo "sha256:9c9cecb1ad8f37012baea8676b76a4d7d96d23b656aa1b8dc79b8d77ad27aa3e" | tee $RESULTS/IMAGE_DIGEST
 	echo "quay.io/mmorhun-org/test-jenkins:latest@sha256:9c9cecb1ad8f37012baea8676b76a4d7d96d23b656aa1b8dc79b8d77ad27aa3e" | tee $RESULTS/IMAGE_REF
