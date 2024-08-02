@@ -38,6 +38,7 @@ function rox-deploy-check() {
 	if [ "${INSECURE_SKIP_TLS_VERIFY}" = "true" ] ; then
 	  curl_insecure='--insecure'
 	fi
+        set -x
 	curl $curl_insecure -s -L -H "Authorization: Bearer $ROX_API_TOKEN" \
 	  "https://${ROX_CENTRAL_ENDPOINT}/api/cli/download/roxctl-linux" \
 	  --output ./roxctl  \
@@ -47,7 +48,7 @@ function rox-deploy-check() {
 	  exit_with_fail_result
 	fi
 	chmod +x ./roxctl  > /dev/null
-	
+	set +x
 	component_name=$(yq .metadata.name application.yaml)
 	echo "Performing scan for ${component_name} component"
 	file_to_check="components/${component_name}/base/deployment.yaml"
