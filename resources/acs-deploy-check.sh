@@ -58,7 +58,7 @@ function rox-deploy-check() {
 	    $( [ "${INSECURE_SKIP_TLS_VERIFY}" = "true" ] && echo -n "--insecure-skip-tls-verify") \
 	    -e "${ROX_CENTRAL_ENDPOINT}" --file "$file_to_check" --output json \
 	    > $TEMP_DIR/roxctl_deployment_check_output.json
-	  cp $TEMP_DIR/roxctl_deployment_check_output.json /workspace/repository/acs-deploy-check.json
+	  cp $TEMP_DIR/roxctl_deployment_check_output.json acs-deploy-check.json
 	else
 	  echo "Failed to find file to check: $file_to_check"
 	  exit 2
@@ -70,7 +70,7 @@ function report() {
 	echo "Running $TASK_NAME:report"
 	#!/usr/bin/env bash
 	echo "ACS_DEPLOY_EYECATCHER_BEGIN"
-	cat /workspace/repository/acs-deploy-check.json
+	cat acs-deploy-check.json
 	echo "ACS_DEPLOY_EYECATCHER_END"
 }
 
