@@ -9,6 +9,9 @@ function build() {
 	echo "Running $TASK_NAME:build"
 	echo "================================= CHANGED =============================="
 
+	echo "TASK NAME: ${TASK_NAME}"
+	echo "RESULTS DIR: ${RESULTS}"
+ 
 	echo "GH ====> ${GITOPS_AUTH_PASSWORD:0:10}"
 	echo "URL====> $ROX_CENTRAL_ENDPOINT"
  	echo "TOKEN==> ${ROX_API_TOKEN:0:10}"
