@@ -52,7 +52,7 @@ function rox-image-check() {
 	  echo -n "--insecure-skip-tls-verify") \
 	  -e "${ROX_CENTRAL_ENDPOINT}" --image "$IMAGE" --output json --force \
 	  > roxctl_image_check_output.json
-	cp roxctl_image_check_output.json /steps-shared-folder/acs-image-check.json
+	cp roxctl_image_check_output.json acs-image-check.json
 	
 }
 
@@ -60,7 +60,7 @@ function report() {
 	echo "Running $TASK_NAME:report"
 	#!/usr/bin/env bash
 	echo "ACS_IMAGE_CHECK_EYECATCHER_BEGIN"
-	cat /steps-shared-folder/acs-image-check.json
+	cat acs-image-check.json
 	echo "ACS_IMAGE_CHECK_EYECATCHER_END"
 	
 }
