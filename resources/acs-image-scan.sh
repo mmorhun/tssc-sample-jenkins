@@ -62,7 +62,7 @@ function rox-image-scan() {
 	  -e "${ROX_CENTRAL_ENDPOINT}" --image "$IMAGE" --output json --force \
 	  > roxctl_image_scan_output.json
 	image_scan_err_code=$?
-	cp roxctl_image_scan_output.json /steps-shared-folder/acs-image-scan.json
+	cp roxctl_image_scan_output.json acs-image-scan.json
 	if [ $image_scan_err_code -ne 0 ]; then
 	  cat roxctl_image_scan_output.json
 	  note='ACS image scan failed to process the image. See the task logs for more details.'
@@ -92,7 +92,7 @@ function report() {
 	echo "Running $TASK_NAME:report"
 	#!/usr/bin/env bash
 	echo "ACS_IMAGE_SCAN_EYECATCHER_BEGIN"
-	cat /steps-shared-folder/acs-image-scan.json
+	cat acs-image-scan.json
 	echo "ACS_IMAGE_SCAN_EYECATCHER_END"
 	
 }
