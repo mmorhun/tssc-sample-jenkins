@@ -1,32 +1,83 @@
 #!/bin/bash
 
-SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )"
+SCRIPTDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" 
 
 # buildah-rhtap
-source $SCRIPTDIR/common.sh
+source $SCRIPTDIR/common.sh 
+
+
 
 function build() {
 	echo "Running $TASK_NAME:build"
-	echo "================================= CHANGED =============================="
+	echo "Running Login"
+	buildah login -u $QUAY_IO_CREDS_USR -p $QUAY_IO_CREDS_PSW quay.io
 
-	#echo "TASK NAME: ${TASK_NAME}"
-	#echo "RESULTS DIR: ${RESULTS}"
- 
-	echo "GH ====> ${GITOPS_AUTH_PASSWORD:0:10}"
-	echo "URL====> $ROX_CENTRAL_ENDPOINT"
- 	echo "TOKEN==> ${ROX_API_TOKEN:0:10}"
+	# Check if the Dockerfile exists
+	SOURCE_CODE_DIR=.
+	if [ -e "$SOURCE_CODE_DIR/$CONTEXT/$DOCKERFILE" ]; then
+	  dockerfile_path="$SOURCE_CODE_DIR/$CONTEXT/$DOCKERFILE"
+	elif [ -e "$SOURCE_CODE_DIR/$DOCKERFILE" ]; then
+	  dockerfile_path="$SOURCE_CODE_DIR/$DOCKERFILE"
+	else
+	  echo "Cannot find Dockerfile $DOCKERFILE"
+	  exit 1
+	fi
+	
+	BUILDAH_ARGS=()
+	if [ -n "${BUILD_ARGS_FILE}" ]; then
+	  BUILDAH_ARGS+=("--build-arg-file=${SOURCE_CODE_DIR}/${BUILD_ARGS_FILE}")
+	fi
+	
+	for build_arg in "$@"; do
+	  BUILDAH_ARGS+=("--build-arg=$build_arg")
+	done
+	
+	# Build the image
+	buildah build \
+	  "${BUILDAH_ARGS[@]}" \
+	  --tls-verify=$TLSVERIFY \
+	  --ulimit nofile=4096:4096 \
+	  -f "$dockerfile_path" -t $IMAGE $SOURCE_CODE_DIR/$CONTEXT
+	
+	# Push the image
+	buildah push \
+	  --tls-verify=$TLSVERIFY \
+	  --retry=5 \
+	  --digestfile $TEMP_DIR/files/image-digest $IMAGE \
+	  docker://$IMAGE
+	
 	# Set task results
-	echo "sha256:1f0f650f4bd1153bd2666763e293e630e9d516cbacd5858dfc79ccd3878d6f3b" | tee $RESULTS/IMAGE_DIGEST
-	echo "quay.io/redhat-user-workloads/rhtap-build-tenant/build-service/build-service:fc154a3fc1d240e27c3435369059f601b33ab3fa@sha256:1f0f650f4bd1153bd2666763e293e630e9d516cbacd5858dfc79ccd3878d6f3b" | tee $RESULTS/IMAGE_REF
-	echo "quay.io/redhat-user-workloads/rhtap-build-tenant/build-service/build-service:fc154a3fc1d240e27c3435369059f601b33ab3fa" | tee $RESULTS/IMAGE_URL
-
-    # Alt for testing
-    #echo "sha256:1f0f650f4bd1153bd2666763e293e630e9d516cbacd5858dfc79ccd3878d6f3b" | tee $RESULTS/IMAGE_DIGEST
-    #echo "quay.io/redhat-user-workloads/rhtap-build-tenant/build-service/build-service:fc154a3fc1d240e27c3435369059f601b33ab3fa@sha256:1f0f650f4bd1153bd2666763e293e630e9d516cbacd5858dfc79ccd3878d6f3b" | tee $RESULTS/IMAGE_REF
-    #echo "quay.io/redhat-user-workloads/rhtap-build-tenant/build-service/build-service:fc154a3fc1d240e27c3435369059f601b33ab3fa" | tee $RESULTS/IMAGE_URL
+	buildah images --format '{{ .Name }}:{{ .Tag }}@{{ .Digest }}' | grep -v $IMAGE > $RESULTS/BASE_IMAGES_DIGESTS
+	cat $TEMP_DIR/files/image-digest | tee $RESULTS/IMAGE_DIGEST
+	echo -n "$IMAGE" | tee $RESULTS/IMAGE_URL
+	
+	# Save the image so it can be used in the generate-sbom step
+	buildah push "$IMAGE" oci:$TEMP_DIR/files/image
+	 
 }
 
-# Task Steps
+function generate-sboms() {
+	echo "Running $TASK_NAME:generate-sboms"
+	syft dir:. --output cyclonedx-json@1.5=$TEMP_DIR/files/sbom-source.json
+	syft oci-dir:$TEMP_DIR/files/image --output cyclonedx-json@1.5=$TEMP_DIR/files/sbom-image.json
+}
+
+function upload-sbom() {
+	echo "Running $TASK_NAME:upload-sbom" 
+	cosign attach sbom --sbom $TEMP_DIR/files/sbom-cyclonedx.json --type cyclonedx "$IMAGE"
+}
+function delim() { 
+	printf '=%.0s' {1..8}
+}
+# Task Steps 
 build
+delim
+generate-sboms
+delim
+echo "RUNNING PYTHON "
+python3 $SCRIPTDIR/merge-sboms.sh
+delim
+upload-sbom
+delim
 
 exit_with_success_result
